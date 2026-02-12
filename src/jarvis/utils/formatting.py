@@ -132,6 +132,107 @@ def format_label_list(labels: list[dict]) -> str:
     return "\n".join(lines)
 
 
+def format_repo(repo) -> str:
+    """GitHub 저장소를 포맷팅한다."""
+    lines = [
+        f"📦 {repo.full_name}",
+        f"  설명: {repo.description or '(없음)'}",
+        f"  언어: {repo.language or '(없음)'}",
+        f"  ⭐ {repo.stargazers_count}  🍴 {repo.forks_count}",
+        f"  공개: {'예' if not repo.private else '아니오'}",
+        f"  기본 브랜치: {repo.default_branch}",
+        f"  URL: {repo.html_url}",
+    ]
+    return "\n".join(lines)
+
+
+def format_repo_list(repos: list) -> str:
+    """저장소 목록을 포맷팅한다."""
+    formatted = [format_repo(r) for r in repos]
+    return f"총 {len(repos)}개 저장소:\n\n" + "\n\n".join(formatted)
+
+
+def format_issue(issue, detailed: bool = False) -> str:
+    """GitHub 이슈를 포맷팅한다."""
+    state_icon = "🟢" if issue.state == "open" else "🔴"
+    lines = [
+        f"{state_icon} #{issue.number} {issue.title}",
+        f"  상태: {issue.state}",
+        f"  작성자: {issue.user.login}",
+        f"  생성일: {issue.created_at.strftime('%Y-%m-%d %H:%M')}",
+    ]
+
+    if issue.labels:
+        label_names = [label.name for label in issue.labels]
+        lines.append(f"  라벨: {', '.join(label_names)}")
+
+    if issue.assignees:
+        assignee_names = [a.login for a in issue.assignees]
+        lines.append(f"  담당자: {', '.join(assignee_names)}")
+
+    if detailed:
+        lines.append(f"  URL: {issue.html_url}")
+        if issue.body:
+            lines.append(f"\n--- 본문 ---\n{issue.body}")
+
+    return "\n".join(lines)
+
+
+def format_issue_list(issues: list) -> str:
+    """이슈 목록을 포맷팅한다."""
+    formatted = [format_issue(i) for i in issues]
+    return f"총 {len(issues)}개 이슈:\n\n" + "\n\n".join(formatted)
+
+
+def format_pull_request(pr, detailed: bool = False) -> str:
+    """GitHub PR을 포맷팅한다."""
+    state_icon = "🟢" if pr.state == "open" else ("🟣" if pr.merged else "🔴")
+    lines = [
+        f"{state_icon} #{pr.number} {pr.title}",
+        f"  상태: {pr.state}{'(merged)' if pr.merged else ''}",
+        f"  작성자: {pr.user.login}",
+        f"  브랜치: {pr.head.ref} → {pr.base.ref}",
+        f"  생성일: {pr.created_at.strftime('%Y-%m-%d %H:%M')}",
+    ]
+
+    if pr.labels:
+        label_names = [label.name for label in pr.labels]
+        lines.append(f"  라벨: {', '.join(label_names)}")
+
+    if detailed:
+        lines.append(f"  변경: +{pr.additions} -{pr.deletions} ({pr.changed_files}개 파일)")
+        lines.append(f"  URL: {pr.html_url}")
+        if pr.body:
+            lines.append(f"\n--- 설명 ---\n{pr.body}")
+
+    return "\n".join(lines)
+
+
+def format_pull_request_list(prs: list) -> str:
+    """PR 목록을 포맷팅한다."""
+    formatted = [format_pull_request(p) for p in prs]
+    return f"총 {len(prs)}개 PR:\n\n" + "\n\n".join(formatted)
+
+
+def format_notification_list(notifications: list) -> str:
+    """알림 목록을 포맷팅한다."""
+    if not notifications:
+        return "알림이 없습니다."
+
+    lines = [f"총 {len(notifications)}개 알림:"]
+    for n in notifications:
+        subject = n.subject
+        repo_name = n.repository.full_name
+        reason = n.reason
+        unread = "🔵" if n.unread else "⚪"
+        lines.append(f"\n{unread} [{subject.type}] {subject.title}")
+        lines.append(f"  저장소: {repo_name}")
+        lines.append(f"  사유: {reason}")
+        lines.append(f"  업데이트: {n.updated_at.strftime('%Y-%m-%d %H:%M')}")
+
+    return "\n".join(lines)
+
+
 def _extract_body(message: dict) -> str:
     """메일 본문을 추출한다."""
     payload = message.get("payload", {})
